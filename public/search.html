@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>主播搜索</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+<div id="app" class="min-h-screen">
+
+  <!-- 顶部导航 -->
+  <div class="h-14 bg-white border-b flex items-center justify-between px-6">
+    <div class="flex items-center gap-3 font-semibold text-lg">
+      <div class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+        ⚡
+      </div>
+      <a href="index.html" class="hover:text-blue-500 transition">直播监控</a>
+    </div>
+    <div class="flex items-center gap-5">
+      <span class="text-blue-500 text-sm font-medium">搜索主播</span>
+      <a href="history.html" class="text-gray-500 text-sm hover:text-blue-500 transition">历史记录</a>
+      <a href="index.html" class="text-gray-500 text-sm hover:text-blue-500 transition">控制台</a>
+    </div>
+  </div>
+
+  <!-- 主体 -->
+  <div class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- 标题 -->
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold mb-1">搜索主播</h2>
+      <p class="text-gray-400 text-sm">通过关键词查找抖音主播并添加监控</p>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3 mb-6">
+      <input
+              v-model="keyword"
+              placeholder="请输入主播名称或ID..."
+              class="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none"
+      >
+      <button
+              @click="search"
+              class="bg-blue-500 hover:bg-blue-600 transition text-white px-5 py-3 rounded-xl text-sm"
+      >
+        搜索
+      </button>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div v-if="list.length" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+
+      <!-- 表头 -->
+      <div class="grid grid-cols-5 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid">
+        <div>主播信息</div>
+        <div>ID</div>
+        <div class="text-center">粉丝数</div>
+        <div class="text-center">aid</div>
+        <div class="text-center">操作</div>
+      </div>
+
+      <!-- PC 列表 -->
+      <div v-for="item in list" :key="item.anchor_id"
+           class="hidden md:grid grid-cols-5 items-center px-6 py-5 border-b last:border-0 hover:bg-gray-50 transition">
+
+        <!-- 主播 -->
+        <div class="flex items-center gap-3">
+          <img :src="item.avatar_url" class="w-11 h-11 rounded-full">
+          <div class="font-medium">{{ item.nick_name }}</div>
+        </div>
+
+        <!-- ID -->
+        <div class="text-gray-500">{{ item.display_id }}</div>
+
+        <!-- 粉丝 -->
+        <div class="text-center text-gray-500 text-sm">
+          {{ item.fans_num.toLocaleString() }}
+        </div>
+
+        <!-- anchor_id -->
+        <div class="text-center text-gray-500 text-sm">
+          {{ item.anchor_id }}
+        </div>
+
+        <!-- 操作 -->
+        <div class="text-center">
+          <div class="flex  gap-2 justify-center">
+            <button
+                    @click="add(item.display_id)"
+                    class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg"
+            >
+              添加监控
+            </button>
+            <button
+                    @click="viewHistory(item.anchor_id)"
+                    class="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg"
+            >
+              直播动态
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ✅ 手机卡片模式 -->
+      <div class="md:hidden space-y-3 p-3">
+        <div v-for="item in list" :key="item.anchor_id"
+             class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+
+          <div class="flex items-center gap-3">
+            <img :src="item.avatar_url" class="w-10 h-10 rounded-full">
+            <div>
+              <div class="font-medium text-sm">{{ item.nick_name }}</div>
+              <div class="text-xs text-gray-400">{{ item.display_id }}</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1 items-end">
+            <button
+                    @click="add(item.display_id)"
+                    class="bg-blue-500 text-white text-xs px-3 py-1 rounded-lg"
+            >
+              添加
+            </button>
+            <button
+                    @click="viewHistory(item.anchor_id)"
+                    class="bg-green-500 text-white text-xs px-3 py-1 rounded-lg"
+            >
+              历史
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ✅ 状态提示 -->
+  <div v-if="toast"
+       class="fixed top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-sm px-5 py-3 rounded-full shadow-lg">
+    {{ toast }}
+  </div>
+
+</div>
+
+<script>
+  const { createApp } = Vue
+
+  createApp({
+    data() {
+      return {
+        keyword: '',
+        list: [],
+        toast: '',
+        apiBase: 'http://localhost:8000/api'
+      }
+    },
+    
+    mounted() {
+      // 从URL获取参数并自动填充搜索框
+      const urlParams = new URLSearchParams(window.location.search);
+      // 支持rid参数
+      const rid = urlParams.get('rid');
+      if (rid) {
+        this.keyword = rid;
+        this.search();
+      }
+      // 兼容已有的room_id参数
+      const roomId = urlParams.get('room_id');
+      if (roomId && !rid) {
+        this.keyword = roomId;
+        this.search();
+      }
+    },
+
+    methods: {
+      async search() {
+        if (!this.keyword) return this.showToast('请输入关键词')
+        
+        // 更新URL参数，支持分享和收藏
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('rid', this.keyword);
+        window.history.replaceState(null, '', `?${urlParams.toString()}`);
+        
+        const res = await fetch(`${this.apiBase}/search/${encodeURIComponent(this.keyword)}`)
+        const data = await res.json()
+        this.list = data.data || []
+      },
+
+      async add(id) {
+        const d = await fetch(`${this.apiBase}/add/${id}`)
+        if (d.status !== 200) return this.showToast('❌ 添加失败')
+        this.showToast('✅ 已添加监控')
+      },
+
+      showToast(msg) {
+        this.toast = msg
+        setTimeout(() => this.toast = '', 2000)
+      },
+      
+      // 查看主播历史直播记录
+      viewHistory(aid) {
+        window.location.href = `history.html?rid=${aid}`;
+      }
+    }
+  }).mount('#app')
+</script>
+
+</body>
+</html>

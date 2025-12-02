@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>直播历史记录</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+<div id="app" class="min-h-screen">
+
+    <!-- 顶部导航 -->
+    <div class="h-14 bg-white border-b flex items-center justify-between px-6">
+        <div class="flex items-center gap-3 font-semibold text-lg">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                ⚡
+            </div>
+            <a href="index.html" class="hover:text-blue-500 transition">直播监控</a>
+        </div>
+        <div class="flex items-center gap-5">
+            <a href="search.html" class="text-gray-500 text-sm hover:text-blue-500 transition">搜索主播</a>
+            <span class="text-blue-500 text-sm font-medium">历史记录</span>
+            <a href="index.html" class="text-gray-500 text-sm hover:text-blue-500 transition">控制台</a>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- 标题 -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1">直播历史</h2>
+            <p class="text-gray-400 text-sm">查看主播的直播历史记录</p>
+        </div>
+
+        <!-- 搜索 + 筛选 -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row items-center gap-3 mb-6">
+            <input
+                    v-model="anchorId"
+                    placeholder="输入直播ID查看历史..."
+                    class="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none"
+            >
+            <button
+                    @click="fetchHistory"
+                    class="bg-blue-500 hover:bg-blue-600 transition text-white px-5 py-3 rounded-xl text-sm flex items-center gap-1"
+            >
+                🔍 搜索历史
+            </button>
+        </div>
+
+        <!-- 表格卡片 -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" v-if="history.length > 0">
+
+            <!-- 表头 -->
+            <div class="grid grid-cols-5 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid">
+                <div>直播状态</div>
+                <div>房间ID</div>
+                <div>主播ID</div>
+                <div class="text-center">开始时间</div>
+                <div class="text-center">操作</div>
+            </div>
+
+            <!-- PC 列表 -->
+            <div v-for="item in history" :key="item.room_id"
+                 class="hidden md:grid grid-cols-5 items-center px-6 py-5 border-b last:border-0 hover:bg-gray-50 transition">
+
+                <!-- 状态 -->
+                <div>
+                    <span :class="getStatusClass(item.status)" class="px-3 py-1 rounded-full text-xs font-medium">
+                        {{ getStatusText(item.status) }}
+                    </span>
+                </div>
+
+                <!-- 房间ID -->
+                <div class="text-gray-500 text-sm break-all max-w-xs">{{ item.room_id }}</div>
+
+                <!-- 主播ID -->
+                <div class="text-gray-500 text-sm">{{ item.anchor_id }}</div>
+
+                <!-- 时间 -->
+                <div class="text-center text-gray-500 text-sm">
+                    {{ formatTime(item.time_start) }}
+                </div>
+                
+                <!-- 操作 -->
+                <div class="text-center">
+                    <button
+                            @click="goToDataScreen(item.room_id)"
+                            class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                    >
+                        📊 数据大屏
+                    </button>
+                </div>
+            </div>
+
+            <!-- 手机卡片模式 -->
+            <div class="md:hidden space-y-3 p-3">
+                <div v-for="item in history" :key="item.room_id"
+                     class="bg-gray-50 rounded-xl p-4">
+                    
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="font-medium text-sm">房间ID: {{ item.room_id }}</div>
+                        <span :class="getStatusClass(item.status)" class="px-2 py-1 rounded-full text-xs font-medium">
+                            {{ getStatusText(item.status) }}
+                        </span>
+                    </div>
+                    
+                    <div class="text-xs text-gray-500 mb-1">主播ID: {{ item.anchor_id }}</div>
+                    <div class="text-xs text-gray-400">{{ formatTime(item.time_start) }}</div>
+                    
+                    <div class="flex justify-center mt-2">
+                        <button
+                                @click="goToDataScreen(item.room_id)"
+                                class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                        >
+                            📊 数据大屏
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 无数据提示 -->
+        <div v-else class="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <div class="text-gray-400 mb-2">📊</div>
+            <p class="text-gray-500">暂无历史记录</p>
+            <p class="text-gray-400 text-sm mt-1">请输入主播ID并点击搜索查看历史记录</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue
+
+    createApp({
+        data() {
+            return {
+                history: [],
+                anchorId: '',
+                apiBase: 'http://localhost:8000/api'
+            }
+        },
+
+        mounted() {
+            // 从URL获取参数并自动填充搜索框
+            const urlParams = new URLSearchParams(window.location.search);
+            // 支持rid参数
+            const rid = urlParams.get('rid');
+            if (rid) {
+                this.anchorId = rid;
+                this.fetchHistory();
+            }
+            // 支持aid参数
+            const aid = urlParams.get('aid');
+            if (aid && !rid) {
+                this.anchorId = aid;
+                this.fetchHistory();
+            }
+        },
+    
+    methods: {
+        /**
+         * 获取历史记录数据
+         */
+        async fetchHistory() {
+            if (!this.anchorId) return alert('请输入主播ID')
+            try {
+                const res = await fetch(`${this.apiBase}/history/${this.anchorId}`)
+                const data = await res.json()
+                if (data.code === 200) {
+                    this.history = data.data
+                } else {
+                    alert('获取历史记录失败: ' + data.message)
+                }
+            } catch (error) {
+                alert('获取历史记录失败: ' + error.message)
+            }
+        },
+
+            /**
+             * 根据状态值获取对应的样式类
+             * @param {string|number} status - 状态值
+             * @returns {string} CSS类名
+             */
+            getStatusClass(status) {
+                // 处理空值并转换为字符串进行比较
+                status = String(status || '')
+                switch (status) {
+                    case '0':
+                    case '4':
+                        return 'bg-purple-100 text-purple-800' // 回放 - 紫色系
+                    case '2':
+                        return 'bg-green-100 text-green-800'    // 正在直播 - 绿色系
+                    default:
+                        return 'bg-gray-100 text-gray-800'      // 未知状态 - 灰色系
+                }
+            },
+
+            /**
+             * 根据状态值获取对应的文本描述
+             * @param {string|number} status - 状态值
+             * @returns {string} 状态描述
+             */
+            getStatusText(status) {
+                // 处理空值并转换为字符串进行比较
+                status = String(status || '')
+                switch (status) {
+                    case '0':
+                    case '4':
+                        return '回放'
+                    case '2':
+                        return '正在直播'
+                    default:
+                        return '未知'
+                }
+            },
+
+            /**
+             * 格式化时间戳为可读格式
+             * @param {number} ts - 时间戳
+             * @returns {string} 格式化后的时间字符串
+             */
+            formatTime(ts) {
+                const d = new Date(ts * 1000) // 转换为毫秒级时间戳
+                return d.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                })
+            },
+            
+            /**
+             * 跳转到数据大屏页面
+             * @param {string} roomId - 房间ID
+             */
+            goToDataScreen(roomId) {
+                window.location.href = `room.html?room_id=${roomId}`;
+            }
+        }
+    }).mount('#app')
+</script>
+
+</body>
+</html>

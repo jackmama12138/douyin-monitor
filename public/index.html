@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>直播监控</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+<div id="app" class="min-h-screen">
+
+    <!-- 顶部导航 -->
+    <div class="h-14 bg-white border-b flex items-center justify-between px-6">
+        <div class="flex items-center gap-3 font-semibold text-lg">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                ⚡
+            </div>
+            <a href="index.html" class="hover:text-blue-500 transition">直播监控</a>
+        </div>
+        <div class="flex items-center gap-5">
+            <a href="search.html" class="text-gray-500 text-sm hover:text-blue-500 transition">搜索主播</a>
+            <a href="history.html" class="text-gray-500 text-sm hover:text-blue-500 transition">历史记录</a>
+            <span class="text-blue-500 text-sm font-medium">控制台</span>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- 标题 -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1">监控列表</h2>
+            <p class="text-gray-400 text-sm">管理您的直播监控目标</p>
+        </div>
+
+        <!-- 搜索 + 添加 -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3 mb-6">
+            <input
+                    v-model="newId"
+                    placeholder="输入主播ID进行添加..."
+                    class="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none"
+            >
+            <button
+                    @click="addAnchor"
+                    class="bg-blue-500 hover:bg-blue-600 transition text-white px-5 py-3 rounded-xl text-sm flex items-center gap-1"
+            >
+                + 添加监控
+            </button>
+        </div>
+
+        <!-- 表格卡片 -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+
+            <!-- 表头 -->
+            <div class="grid grid-cols-5 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid">
+                <div>主播信息</div>
+                <div>ID</div>
+                <div class="text-center">监控状态</div>
+                <div class="text-center">创建时间</div>
+                <div class="text-center">操作</div>
+            </div>
+
+            <!-- PC 列表 -->
+            <div v-for="item in list" :key="item.id"
+                 class="hidden md:grid grid-cols-5 items-center px-6 py-5 border-b last:border-0 hover:bg-gray-50 transition">
+
+                <!-- 主播 -->
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img :src="item.avatar" class="w-11 h-11 rounded-full">
+                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                    </div>
+                    <div class="font-medium">{{ item.name }}</div>
+                </div>
+
+                <!-- ID -->
+                <div class="text-gray-500">{{ item.id }}</div>
+
+                <!-- 蓝色开关 -->
+                <div class="flex justify-center">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only" :checked="item.monitor" @change="toggleMonitor(item)">
+                        <div :class="item.monitor ? 'bg-blue-500' : 'bg-gray-300'"
+                             class="w-12 h-6 rounded-full transition relative">
+                            <div :class="item.monitor ? 'translate-x-6' : ''"
+                                 class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 时间 -->
+                <div class="text-center text-gray-500 text-sm">
+                    {{ formatTime(item.createdAt) }}
+                </div>
+
+                <!-- 操作 -->
+                <div class="text-center">
+                    <button @click="deleteAnchor(item.id)" class="text-red-500 text-sm hover:underline">
+                        删除
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ✅ 手机卡片模式 -->
+            <div class="md:hidden space-y-3 p-3">
+                <div v-for="item in list" :key="item.id"
+                     class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+
+                    <div class="flex items-center gap-3">
+                        <img :src="item.avatar" class="w-10 h-10 rounded-full">
+                        <div>
+                            <div class="font-medium text-sm">{{ item.name }}</div>
+                            <div class="text-xs text-gray-400">{{ item.id }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only" :checked="item.monitor" @change="toggleMonitor(item)">
+                            <div :class="item.monitor ? 'bg-blue-500' : 'bg-gray-300'"
+                                 class="w-10 h-5 rounded-full transition relative">
+                                <div :class="item.monitor ? 'translate-x-5' : ''"
+                                     class="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition"></div>
+                            </div>
+                        </label>
+                        <button @click="deleteAnchor(item.id)" class="text-red-500 text-xs">✕</button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+	const { createApp } = Vue
+
+	createApp({
+		data() {
+			return {
+				list: [],
+				newId: '',
+				apiBase: 'http://localhost:8000/api'
+			}
+		},
+
+		mounted() {
+			this.fetchList()
+		},
+
+		methods: {
+			async fetchList() {
+				const res = await fetch(`${this.apiBase}/list`)
+				this.list = await res.json()
+			},
+
+			async addAnchor() {
+				if (!this.newId) return alert('请输入主播ID')
+				await fetch(`${this.apiBase}/add/${this.newId}`)
+				this.newId = ''
+				this.fetchList()
+			},
+
+			async toggleMonitor(item) {
+				await fetch(`${this.apiBase}/update/${item.id}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ monitor: !item.monitor })
+				})
+				item.monitor = !item.monitor
+			},
+
+			async deleteAnchor(id) {
+				if (!confirm('确认删除？')) return
+				await fetch(`${this.apiBase}/delete/${id}`, { method: 'DELETE' })
+				this.fetchList()
+			},
+
+			formatTime(ts) {
+				const d = new Date(ts)
+				return d.toLocaleString()
+			}
+		}
+	}).mount('#app')
+</script>
+
+</body>
+</html>

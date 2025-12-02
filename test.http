@@ -1,0 +1,21 @@
+###新增监控主播###
+GET http://localhost:8000/api/add/LAL66996699
+
+###查询所有主播###
+GET http://localhost:8000/api/list
+
+###更新主播监控状态###
+PUT http://localhost:8000/api/update/dongyinchujiu
+Content-Type: application/json
+
+{
+  "monitor": false
+}
+###删除主播###
+DELETE http://localhost:8000/api/delete/dongyinchujiu
+
+###获取房间信息###
+GET http://localhost:8000/api/room/LAL66996699
+
+###获取主播直播状态###
+GET http://localhost:8000/api/room/renyixu1989

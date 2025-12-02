@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>房间详情 - 直播监控</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+<div id="app" class="min-h-screen">
+
+    <!-- 顶部导航 -->
+    <div class="h-14 bg-white border-b flex items-center justify-between px-6">
+        <div class="flex items-center gap-3 font-semibold text-lg">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                ⚡
+            </div>
+            <a href="index.html" class="hover:text-blue-500 transition">直播监控</a>
+        </div>
+        <div class="flex items-center gap-5">
+            <a href="search.html" class="text-gray-500 text-sm hover:text-blue-500 transition">搜索主播</a>
+            <a href="history.html" class="text-gray-500 text-sm hover:text-blue-500 transition">历史记录</a>
+            <span class="text-blue-500 text-sm font-medium">房间详情</span>
+        </div>
+    </div>
+    
+    <!-- 房间ID输入区域 -->
+    <div class="bg-white border-b px-6 py-4 flex items-center justify-center">
+        <div class="flex items-center gap-3 max-w-2xl w-full">
+            <input 
+                v-model="inputRoomId" 
+                type="text" 
+                placeholder="输入房间ID" 
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+            <button 
+                @click="changeRoomId" 
+                class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl text-sm transition"
+            >
+                确定
+            </button>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+        <div class="max-w-6xl mx-auto px-4 py-4">
+        
+        <!-- 加载状态 -->
+        <div v-if="loading" class="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div class="w-16 h-16 mx-auto border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-500">加载中...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="error" class="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div class="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-4">
+                ❌
+            </div>
+            <p class="text-gray-500 mb-4">{{ error }}</p>
+            <button @click="fetchRoomData" class="bg-blue-500 hover:bg-blue-600 transition text-white px-5 py-2 rounded-xl text-sm">
+                重试
+            </button>
+        </div>
+
+        <!-- 房间内容 -->
+        <div v-else>
+            <!-- 标题 -->
+                <div class="mb-4">
+                    <h2 class="text-xl font-bold mb-1">{{ roomData.title || '房间详情' }}</h2>
+                    <p class="text-gray-400 text-sm">房间ID: {{ roomData.room_id }}</p>
+                </div>
+
+            <!-- 视频播放区域 -->
+            <div class="bg-white rounded-2xl shadow-sm p-3 mb-4">
+                <div class="relative aspect-video bg-black rounded-xl overflow-hidden">
+                    <video ref="videoRef" class="w-full h-full object-contain" controls></video>
+                    <div v-if="!currentQuality" class="absolute inset-0 flex items-center justify-center">
+                        <p class="text-white bg-black bg-opacity-50 px-4 py-2 rounded-lg text-sm md:text-base">请选择画质</p>
+                    </div>
+                </div>
+                
+                <!-- 画质选择 -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button 
+                        v-for="quality in qualityOptions" 
+                        :key="quality.key"
+                        @click="changeQuality(quality.key)"
+                        :class="{
+                            'bg-blue-500 text-white': currentQuality === quality.key,
+                            'bg-gray-100 text-gray-700 hover:bg-gray-200': currentQuality !== quality.key
+                        }"
+                        class="px-4 py-2 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base transition active:scale-95"
+                    >
+                        {{ quality.label }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- 统计数据 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <div class="text-gray-500 text-sm mb-1">观看人数</div>
+                    <div class="text-2xl font-bold">{{ roomData.user_count }}</div>
+                    <div class="text-green-500 text-xs mt-1">实时数据</div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="text-gray-500 text-sm mb-1">点赞数</div>
+                    <div class="text-2xl font-bold">{{ roomData.like_count }}</div>
+                    <div class="text-blue-500 text-xs mt-1">{{ formatNumber(roomData.like_count) }} 点赞</div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="text-gray-500 text-sm mb-1">总用户</div>
+                    <div class="text-2xl font-bold">{{ roomData.total_user }}</div>
+                    <div class="text-purple-500 text-xs mt-1">{{ formatNumber(roomData.total_user) }} 用户</div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="text-gray-500 text-sm mb-1">关注数</div>
+                    <div class="text-2xl font-bold">{{ roomData.follow_count }}</div>
+                    <div class="text-pink-500 text-xs mt-1">{{ formatNumber(roomData.follow_count) }} 关注</div>
+                </div>
+            </div>
+            
+            <!-- 数据可视化图表 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <!-- 统计数据对比图 -->
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <h3 class="text-base font-semibold mb-3">数据统计对比</h3>
+                    <div class="h-56 md:h-64">
+                        <canvas ref="statChartRef"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 人气指标图 -->
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <h3 class="text-base font-semibold mb-3">人气指标</h3>
+                    <div class="h-56 md:h-64">
+                        <canvas ref="gaugeChartRef"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 时间信息 -->
+            <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+                <h3 class="text-base font-semibold mb-3">时间信息</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="border-l-4 border-green-500 pl-3">
+                        <div class="text-gray-500 text-sm mb-1">开始时间</div>
+                        <div class="font-medium text-sm md:text-base">{{ formatTime(roomData.start_time) }}</div>
+                    </div>
+                    <div class="border-l-4 border-blue-500 pl-3">
+                        <div class="text-gray-500 text-sm mb-1">创建时间</div>
+                        <div class="font-medium text-sm md:text-base">{{ formatTime(roomData.create_time) }}</div>
+                    </div>
+                    <div class="border-l-4 border-purple-500 pl-3">
+                        <div class="text-gray-500 text-sm mb-1">结束时间</div>
+                        <div class="font-medium text-sm md:text-base">{{ formatTime(roomData.finish_time) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, reactive, onMounted, watch } = Vue
+
+    createApp({
+        setup() {
+            // 响应式数据
+            const videoRef = ref(null)
+            const statChartRef = ref(null)
+            const gaugeChartRef = ref(null)
+            const roomData = reactive({})
+            const loading = ref(true)
+            const error = ref('')
+            const currentQuality = ref('')
+            let hls = null
+            let statChart = null
+            let gaugeChart = null
+            
+            // 画质选项
+            const qualityOptions = [
+                { key: 'FULL_HD1', label: '蓝光' },
+                { key: 'HD1', label: '高清' },
+                { key: 'SD1', label: '标清' },
+                { key: 'SD2', label: '流畅' }
+            ]
+            
+            // 房间ID输入值
+            const inputRoomId = ref('')
+            
+            // 从URL获取房间ID
+            const getRoomId = () => {
+                const params = new URLSearchParams(window.location.search)
+                const roomId = params.get('room_id') || '7578900649104575282' // 默认房间ID
+                // 初始化输入框值
+                if (!inputRoomId.value) {
+                    inputRoomId.value = roomId
+                }
+                return roomId
+            }
+            
+            // 更改房间ID
+            const changeRoomId = () => {
+                if (!inputRoomId.value.trim()) {
+                    alert('请输入有效的房间ID')
+                    return
+                }
+                
+                // 更新URL参数
+                const url = new URL(window.location)
+                url.searchParams.set('room_id', inputRoomId.value.trim())
+                window.history.pushState({}, '', url)
+                
+                // 重新加载数据
+                fetchRoomData()
+            }
+            
+            // 获取房间数据
+            const fetchRoomData = async () => {
+                loading.value = true
+                error.value = ''
+                try {
+                    const roomId = getRoomId()
+                    const res = await fetch(`http://localhost:8000/api/roomdate/${roomId}`)
+                    if (!res.ok) throw new Error('获取房间数据失败')
+                    const data = await res.json()
+                    
+                    // 处理stream_url_map中的空格和引号
+                    if (data.stream_url_map) {
+                        Object.keys(data.stream_url_map).forEach(key => {
+                            data.stream_url_map[key] = data.stream_url_map[key].trim().replace(/^[`'"](.*)[`'"]$/, '$1')
+                        })
+                    }
+                    
+                    Object.assign(roomData, data)
+                    
+                    // 重置画质选择
+                    currentQuality.value = ''
+                } catch (err) {
+                    error.value = err.message
+                    console.error('获取房间数据失败:', err)
+                } finally {
+                    loading.value = false
+                }
+            }
+            
+            // 格式化时间
+            const formatTime = (timeStr) => {
+                if (!timeStr) return '-'
+                try {
+                    const d = new Date(timeStr)
+                    return d.toLocaleString()
+                } catch {
+                    return timeStr
+                }
+            }
+            
+            // 格式化数字
+            const formatNumber = (num) => {
+                if (num >= 10000) {
+                    return (num / 10000).toFixed(1) + '万'
+                }
+                return num
+            }
+            
+            // 创建统计对比图表
+            const createStatChart = () => {
+                if (!statChartRef.value || Object.keys(roomData).length === 0) return
+                
+                if (statChart) {
+                    statChart.destroy()
+                }
+                
+                const isMobile = window.innerWidth < 768
+                const ctx = statChartRef.value.getContext('2d')
+                statChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: isMobile ? ['观看', '点赞', '总用户', '关注'] : ['观看人数', '点赞数', '总用户', '关注数'],
+                        datasets: [{
+                            label: '数据统计',
+                            data: [
+                                roomData.user_count || 0,
+                                roomData.like_count || 0,
+                                roomData.total_user || 0,
+                                roomData.follow_count || 0
+                            ],
+                            backgroundColor: [
+                                'rgba(75, 192, 192, 0.6)',
+                                'rgba(54, 162, 235, 0.6)',
+                                'rgba(153, 102, 255, 0.6)',
+                                'rgba(255, 99, 132, 0.6)'
+                            ],
+                            borderColor: [
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        if (value >= 10000) {
+                                            return (value / 10000).toFixed(1) + '万'
+                                        }
+                                        return value
+                                    },
+                                    font: {
+                                        size: isMobile ? 10 : 12
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: isMobile ? 10 : 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let value = context.raw
+                                        if (value >= 10000) {
+                                            value = (value / 10000).toFixed(1) + '万'
+                                        }
+                                        return context.dataset.label + ': ' + value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+            }
+            
+            // 创建人气指标仪表盘
+            const createGaugeChart = () => {
+                if (!gaugeChartRef.value || Object.keys(roomData).length === 0) return
+                
+                if (gaugeChart) {
+                    gaugeChart.destroy()
+                }
+                
+                // 计算综合人气指数 (0-100)
+                const baseValue = roomData.display_value || 0
+                const maxPossibleValue = 1000000 // 假设最大可能值为100万
+                const popularityIndex = Math.min(Math.round((baseValue / maxPossibleValue) * 100), 100)
+                
+                const ctx = gaugeChartRef.value.getContext('2d')
+                gaugeChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [popularityIndex, 100 - popularityIndex],
+                            backgroundColor: [
+                                popularityIndex > 70 ? '#10b981' : 
+                                popularityIndex > 40 ? '#3b82f6' : 
+                                '#6366f1',
+                                '#e5e7eb'
+                            ],
+                            borderWidth: 0,
+                            cutout: '75%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: false
+                            }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true
+                        }
+                    },
+                    plugins: [{ // 注意这里在移动端优化了字体大小
+                        id: 'centerText',
+                        beforeDraw: function(chart) {
+                            const width = chart.width
+                            const height = chart.height
+                            const ctx = chart.ctx
+                            
+                            ctx.restore()
+                            const fontSize = (height / 114).toFixed(2)
+                            ctx.font = fontSize + "em sans-serif" // 在移动端自适应字体大小
+                            ctx.textBaseline = "middle"
+                            
+                            const text = popularityIndex + '%'
+                            const textX = Math.round((width - ctx.measureText(text).width) / 2)
+                            const textY = height / 2
+                            
+                            ctx.fillStyle = popularityIndex > 70 ? '#10b981' : 
+                                          popularityIndex > 40 ? '#3b82f6' : 
+                                          '#6366f1'
+                            ctx.fillText(text, textX, textY)
+                            
+                            // 绘制标签
+                            ctx.font = (fontSize * 0.6) + "em sans-serif" // 小屏幕上使用更小的标签字体
+                            ctx.fillStyle = '#6b7280'
+                            const labelText = '人气指数'
+                            const labelX = Math.round((width - ctx.measureText(labelText).width) / 2)
+                            const labelY = textY + (height * 0.1)
+                            ctx.fillText(labelText, labelX, labelY)
+                            
+                            ctx.save()
+                        }
+                    }]
+                })
+            }
+            
+            // 切换画质
+            const changeQuality = (quality) => {
+                if (!roomData.stream_url_map || !roomData.stream_url_map[quality]) {
+                    alert('该画质暂不可用')
+                    return
+                }
+                
+                currentQuality.value = quality
+                const url = roomData.stream_url_map[quality]
+                
+                // 停止之前的播放
+                if (hls) {
+                    hls.destroy()
+                    hls = null
+                }
+                
+                // 检查浏览器是否支持HLS
+                if (Hls.isSupported()) {
+                    hls = new Hls()
+                    hls.loadSource(url)
+                    hls.attachMedia(videoRef.value)
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        videoRef.value.play()
+                    })
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    hls.startLoad()
+                                    break
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    hls.recoverMediaError()
+                                    break
+                                default:
+                                    console.error('视频播放错误:', data)
+                                    alert('视频播放出错')
+                                    break
+                            }
+                        }
+                    })
+                } else if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
+                    // 对于Safari等原生支持HLS的浏览器
+                    videoRef.value.src = url
+                    videoRef.value.play()
+                } else {
+                    alert('您的浏览器不支持HLS视频播放')
+                }
+            }
+            
+            // 监听房间数据变化，更新图表
+            watch(
+                () => Object.keys(roomData).length,
+                (newLength) => {
+                    if (newLength > 0) {
+                        // 延迟创建图表，确保DOM已更新
+                        setTimeout(() => {
+                            createStatChart()
+                            createGaugeChart()
+                        }, 100)
+                    }
+                }
+            )
+            
+            // 窗口大小变化时重新绘制图表
+            window.addEventListener('resize', () => {
+                createStatChart()
+                createGaugeChart()
+            })
+            
+            // 组件挂载时获取数据
+            onMounted(() => {
+                fetchRoomData()
+            })
+            
+            return {
+                videoRef,
+                statChartRef,
+                gaugeChartRef,
+                roomData,
+                loading,
+                error,
+                currentQuality,
+                qualityOptions,
+                inputRoomId,
+                fetchRoomData,
+                formatTime,
+                formatNumber,
+                changeQuality,
+                changeRoomId
+            }
+        }
+    }).mount('#app')
+</script>
+
+</body>
+</html>
