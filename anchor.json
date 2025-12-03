@@ -8,27 +8,26 @@
     "updatedAt": 1764610721009
   },
   {
-    "name": "逻辑与谎言狼人杀",
-    "id": "LAL66996699",
-    "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_38c9c879dd452f949872f85c196bd0ca.jpeg?from=3067671334",
-    "monitor": false,
-    "createdAt": 1764569763854,
-    "updatedAt": 1764612502695
-  },
-  {
     "name": "王发财（DNF老王）",
     "id": "kem525034",
     "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_df19ebdcd55b543425aa8e45da0c139c.jpeg?from=3067671334",
     "monitor": false,
     "createdAt": 1764587201516,
-    "updatedAt": 1764612503840
+    "updatedAt": 1764669283583
   },
   {
     "name": "东营初九",
     "id": "chujiu1379",
     "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f60e330593fd21af697bbaa038cfd49d.jpeg?from=3067671334",
-    "monitor": false,
+    "monitor": true,
     "createdAt": 1764587403830,
-    "updatedAt": 1764606668871
+    "updatedAt": 1764669282655
+  },
+  {
+    "name": "逻辑与谎言狼人杀",
+    "id": "LAL66996699",
+    "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_38c9c879dd452f949872f85c196bd0ca.jpeg?from=3067671334",
+    "monitor": true,
+    "createdAt": 1764776603593
   }
 ]

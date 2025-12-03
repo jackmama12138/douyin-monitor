@@ -124,7 +124,7 @@ const rommInfoDate = async (roomId)=>{
  * @returns {object} anchor_info 主播信息
  * @property {{avatar: string, name: string, sec_uid: string}} anchor_info - 主播信息
  * */
-const seachAnchor = async (name,server=false)=>{
+const seachAnchor = async (name,server=true)=>{
 	let url = ''
 	const postData = qs.stringify({
 		'keyword': name,
@@ -157,6 +157,14 @@ const historyLive = async (id)=>{
 	return data
 }
 
+const getAid = async (rid)=>{
+		const url = `https://live.douyin.com/webcast/room/web/enter/?aid=6383&web_rid=${rid}`
+		const bogus = generate_a_bogus(url.split('?')[1])
+		const {data} = await axios.get(url+'&a_bogus='+bogus, {
+			headers: {'User-Agent': CONFIG.UA, 'Cookie': CONFIG.CK}
+		})
+		return data?.data?.user?.id_str || ''
+}
 
 
 module.exports = {
@@ -166,4 +174,5 @@ module.exports = {
 	rommInfoDate,
 	seachAnchor,
 	historyLive,
+	getAid,
 }

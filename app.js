@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
 const path = require('path')
-const {liveStatus, roomInfo,anchorInfo,rommInfoDate,seachAnchor, historyLive} = require('./api')
+const {liveStatus, roomInfo,anchorInfo,rommInfoDate,seachAnchor, historyLive,getAid} = require('./api')
 
 const app = express()
 app.use(cors())
@@ -175,13 +175,34 @@ app.get('/api/history/:id', async (req, res) => {
 	res.json(data)
 })
 
+app.get('/api/anchor/:id', async (req, res) => {
+	const id = req.params.id
+	const data = await anchorInfo(id)
+	res.json(data)
+})
+
+/**
+ * 获取抖音直播房间ID获取抖音主播ID
+ * @param {string} rid 抖音直播房间ID
+ * @returns {string} id 抖音主播ID
+ * */
+app.get('/api/aid/:rid', async (req, res) => {
+	const rid = req.params.rid
+	const data = await getAid(rid)
+	res.json(data)
+})
+
+
+
 app.listen(port, () => {
 	console.log(`首页URL: http://localhost:${port}`)
 	console.log(`搜索主播页面: http://localhost:${port}/search.html`)
 	console.log(`历史直播回放测试URL: http://localhost:${port}/history.html`)
+	console.log(`主播信息查询测试URL: http://localhost:${port}/api/anchor/renyixu1989`)
 	console.log(`搜索主播测试URL: http://localhost:${port}/api/search/旭旭宝宝`)
 	console.log(`直播状态测试URL: http://localhost:${port}/api/live/renyixu1989`)
 	console.log(`直播房间信息测试URL: http://localhost:${port}/api/room/renyixu1989`)
 	console.log(`直播房间详细信息测试URL: http://localhost:${port}/api/roomdate/7578749002221439790`)
 	console.log(`主播历史直播记录测试URL: http://localhost:${port}/api/history/71483666475`)
+	console.log(`获取抖音直播房间ID获取抖音主播ID测试URL: http://localhost:${port}/api/aid/renyixu1989`)
 })
