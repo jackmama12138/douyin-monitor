@@ -257,7 +257,8 @@
                 
                 // 注意：这里保持原有的API调用逻辑
                 try {
-                    const roomIdRes = await fetch(`http://localhost:8000/api/room/${webRid}`)
+                    // const roomIdRes = await fetch(`http://localhost:8000/api/room/${webRid}`)
+                    const roomIdRes = await fetch(`https://douyin-monitor.onrender.com/api/room/${webRid}`)
                     if (!roomIdRes.ok) throw new Error('获取房间ID失败')
                     const data = await roomIdRes.json()
                     return data.room_id
@@ -299,7 +300,8 @@
 
                 try {
                     const roomId = await getRoomId()
-                    const res = await fetch(`http://localhost:8000/api/roomdate/${roomId}`)
+                    // const res = await fetch(`http://localhost:8000/api/roomdate/${roomId}`)
+                    const res = await fetch(`https://douyin-monitor.onrender.com/api/roomdate/${roomId}`)
                     if (!res.ok) throw new Error('获取房间数据失败')
                     const data = await res.json()
                     

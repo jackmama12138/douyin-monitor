@@ -16,25 +16,21 @@
     "updatedAt": 1764784902886
   },
   {
+    "name": "旭旭宝宝",
+    "id": "renyixu1989",
+    "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f246f34fbc1f4da300834745a9dfa0fa.jpeg?from=3067671334",
+    "monitor": false,
+    "createdAt": 1764784188834,
+    "updatedAt": 1764870560503,
+    "checkInterval": 600,
+    "lastCheckAt": 1764785400027
+  },
+  {
     "name": "逻辑与谎言狼人杀",
     "id": "LAL66996699",
     "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_38c9c879dd452f949872f85c196bd0ca.jpeg?from=3067671334",
     "monitor": false,
-    "createdAt": 1764776603593,
-    "lastCheckAt": 1764785400027,
-    "failCount": 0,
-    "lastLive": true,
-    "updatedAt": 1764785546688,
-    "checkInterval": 600
-  },
-  {
-    "name": "旭旭宝宝",
-    "id": "renyixu1989",
-    "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f246f34fbc1f4da300834745a9dfa0fa.jpeg?from=3067671334",
-    "monitor": true,
-    "createdAt": 1764784188834,
-    "updatedAt": 1764843562429,
-    "checkInterval": 600,
-    "lastCheckAt": 1764785400027
+    "createdAt": 1764870552195,
+    "updatedAt": 1764870556369
   }
 ]
