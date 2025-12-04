@@ -190,7 +190,7 @@
       // 从URL获取参数并自动填充搜索框
       const urlParams = new URLSearchParams(window.location.search);
       // 支持rid参数
-      const rid = urlParams.get('rid');
+      const rid = urlParams.get('rid') || '旭旭宝宝';
       if (rid) {
         this.keyword = rid;
         this.search();

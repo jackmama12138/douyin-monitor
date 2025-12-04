@@ -174,13 +174,13 @@
             // 从URL获取参数并自动填充搜索框
             const urlParams = new URLSearchParams(window.location.search);
             // 支持rid参数
-            const rid = urlParams.get('rid');
+            const rid = urlParams.get('rid') || '74810581616';
             if (rid) {
                 this.anchorId = rid;
                 this.fetchHistory();
             }
             // 支持aid参数
-            const aid = urlParams.get('aid');
+            const aid = urlParams.get('aid') || '74810581616';
             if (aid && !rid) {
                 this.anchorId = aid;
                 this.fetchHistory();
