@@ -44,6 +44,17 @@ const liveStatus = async (roomId) => {
 	}
 }
 
+const enterRoom = async (roomId) =>{
+		const url = `https://live.douyin.com/webcast/room/web/enter/?aid=6383&web_rid=${roomId}`
+		const bogus = generate_a_bogus(url.split('?')[1])
+		console.log(url+'&a_bogus='+bogus)
+		const {data} = await axios.get(url+'&a_bogus='+bogus, {
+			headers: {'User-Agent': CONFIG.UA, 'Cookie': CONFIG.CK}
+		})
+		return data?.data
+}
+
+
 /**
  * 获取抖音直播房间信息
  * @param {string} roomId 抖音直播房间ID
