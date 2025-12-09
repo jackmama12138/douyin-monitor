@@ -189,7 +189,7 @@
     </div>
 
     <!-- 搜索结果 -->
-    <div v-if="list.length" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div v-if="list.length" class="bg-white rounded-2xl border-gray-100 overflow-hidden">
 
       <!-- 表头 -->
       <div class="grid grid-cols-5 text-gray-500 text-sm font-medium px-6 py-4 border-b border-gray-100 bg-gray-50/50 hidden md:grid">
@@ -205,7 +205,9 @@
 
         <!-- 主播 -->
         <div class="col-span-2 flex items-center gap-4">
-          <img :src="item.avatar_url" class="w-12 h-12 rounded-full ring-2 ring-white shadow-sm object-cover bg-gray-100">
+          <a :href="`/hls.html?web_rid=${item.display_id}`" class="cursor-pointer">
+            <img :src="item.avatar_url" class="w-12 h-12 rounded-full ring-2 ring-white shadow-sm object-cover bg-gray-100 hover:ring-blue-200 transition-all">
+          </a>
           <div class="min-w-0">
             <div class="font-semibold text-slate-900 truncate">{{ item.nick_name }}</div>
             <div class="text-xs text-gray-400 mt-0.5 font-mono">{{ item.display_id }}</div>
@@ -245,12 +247,14 @@
       </div>
 
       <!-- ✅ 手机卡片模式 -->
-      <div class="md:hidden p-2 space-y-2 bg-gray-50/50">
+      <div class="md:hidden p-0 space-y-2 bg-gray-50/50">
         <div v-for="item in list" :key="item.anchor_id"
              class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 active:scale-[0.99] transition-transform">
 
           <!-- 主播头像 -->
-          <img :src="item.avatar_url" class="w-10 h-10 rounded-full ring-1 ring-gray-100 object-cover bg-gray-100 shrink-0">
+          <a :href="`/hls.html?web_rid=${item.display_id}`" class="cursor-pointer">
+            <img :src="item.avatar_url" class="w-10 h-10 rounded-full ring-1 ring-gray-100 object-cover bg-gray-100 shrink-0 hover:ring-blue-200 transition-all">
+          </a>
           
           <!-- 主播信息 -->
           <div class="flex-1 min-w-0">
