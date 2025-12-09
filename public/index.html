@@ -2,14 +2,50 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="直播监控">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
     <title>直播监控</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+        }
         [v-cloak] { display: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        /* PWA 安装提示样式 */
+        #pwa-install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 9999;
+            display: none;
+        }
+        /* 优化移动端触摸体验 */
+        button, input, a, label {
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* 修复 iOS input 阴影 */
+        input {
+            -webkit-appearance: none;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-800 antialiased">
@@ -18,7 +54,7 @@
 
     <!-- 顶部导航 -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between relative z-50 bg-white">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-blue-200 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -37,10 +73,88 @@
             </nav>
 
             <!-- 移动端菜单按钮 -->
-            <button class="md:hidden p-2 text-gray-500">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            <button class="md:hidden p-2 text-gray-500 active:bg-gray-100 rounded-lg transition" @click="toggleMobileMenu">
+                <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
+        
+        <!-- 移动端菜单遮罩 -->
+        <transition
+            enter-active-class="transition-opacity duration-300 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="mobileMenuOpen" 
+                 class="md:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm"
+                 @click="mobileMenuOpen = false">
+            </div>
+        </transition>
+
+        <!-- 移动端菜单内容 -->
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0 -translate-y-4 scale-95"
+            enter-to-class="opacity-100 translate-y-0 scale-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-y-0 scale-100"
+            leave-to-class="opacity-0 -translate-y-4 scale-95"
+        >
+            <div v-if="mobileMenuOpen" 
+                 class="md:hidden absolute top-16 left-0 w-full bg-white z-40 shadow-xl border-b border-gray-100 rounded-b-3xl overflow-hidden origin-top">
+                <div class="p-4 space-y-2">
+                    <a href="search.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-blue-500 shadow-sm group-hover:text-blue-600 group-hover:shadow-md transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            <span class="font-medium text-slate-700 group-hover:text-blue-700">搜索主播</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+
+                    <a href="history.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-purple-500 shadow-sm group-hover:text-purple-600 group-hover:shadow-md transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <span class="font-medium text-slate-700 group-hover:text-purple-700">历史记录</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+
+                    <a href="hls.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-orange-500 shadow-sm group-hover:text-orange-600 group-hover:shadow-md transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <span class="font-medium text-slate-700 group-hover:text-orange-700">HLS播放器</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+
+                    <a href="room.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-pink-500 shadow-sm group-hover:text-pink-600 group-hover:shadow-md transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            </div>
+                            <span class="font-medium text-slate-700 group-hover:text-pink-700">房间详情</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 group-hover:text-pink-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+
+                    <div class="pt-2">
+                        <span class="flex items-center justify-center gap-2 w-full px-4 py-3.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm shadow-sm border border-blue-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            控制台
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </transition>
     </header>
 
     <!-- 主体内容 -->
@@ -74,10 +188,10 @@
         </div>
 
         <!-- 表格卡片 -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
 
             <!-- 表头 -->
-            <div class="grid grid-cols-6 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid">
+            <div class="grid grid-cols-6 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid bg-gray-50/50">
                 <div>主播信息</div>
                 <div>ID</div>
                 <div class="text-center">监控状态</div>
@@ -92,31 +206,29 @@
 
                 <!-- 主播 -->
                 <div class="flex items-center gap-3">
-                    <img :src="item.avatar" class="w-11 h-11 rounded-full">
-                    <div class="font-medium">{{ item.name }}</div>
+                    <img :src="item.avatar" class="w-11 h-11 rounded-full object-cover border border-gray-100">
+                    <div class="font-medium text-slate-900">{{ item.name }}</div>
                 </div>
 
                 <!-- ID -->
-                <div class="text-gray-500">{{ item.id }}</div>
+                <div class="text-gray-500 font-mono text-sm">{{ item.id }}</div>
 
                 <!-- 监控开关 -->
                 <div class="flex justify-center">
                     <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only" :checked="item.monitor" @change="toggleMonitor(item)">
-                        <div :class="item.monitor ? 'bg-blue-500' : 'bg-gray-300'" class="w-12 h-6 rounded-full transition relative">
-                            <div :class="item.monitor ? 'translate-x-6' : ''" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition"></div>
-                        </div>
+                        <input type="checkbox" class="sr-only peer" :checked="item.monitor" @change="toggleMonitor(item)">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
 
                 <!-- 直播状态 -->
                 <div class="text-center">
                       <span v-if="item.monitor">
-  <span v-if="item.lastLive === true" class="text-green-600">直播中</span>
-  <span v-else-if="item.lastLive === false" class="text-gray-400">离线</span>
-  <span v-else class="text-yellow-500">检测中</span>
+  <span v-if="item.lastLive === true" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">直播中</span>
+  <span v-else-if="item.lastLive === false" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">离线</span>
+  <span v-else class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">检测中</span>
 </span>
-                    <span v-else class="text-gray-300">未监控</span>
+                    <span v-else class="text-gray-300 text-sm">未监控</span>
 
                 </div>
 
@@ -127,44 +239,52 @@
 
                 <!-- 操作 -->
                 <div class="text-center">
-                    <button @click="deleteAnchor(item.id)" class="text-red-500 text-sm hover:underline">删除</button>
+                    <button @click="deleteAnchor(item.id)" class="text-slate-400 hover:text-red-600 transition p-2 rounded-full hover:bg-red-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- 手机卡片模式 -->
-            <div class="md:hidden space-y-3 p-3">
-                <div v-for="item in list" :key="item.id" class="bg-gray-50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
-                    <div class="flex items-center gap-3">
-                        <img :src="item.avatar" class="w-10 h-10 rounded-full">
-                        <div>
-                            <div class="font-medium text-sm">{{ item.name }}</div>
-                            <div class="text-xs text-gray-400">{{ item.id }}</div>
-                        </div>
+            <!-- 手机卡片模式 (单行版) -->
+            <div class="md:hidden p-0 space-y-2 bg-gray-50">
+                <div v-for="item in list" :key="item.id" class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 active:scale-[0.99] transition-transform">
+                    
+                    <!-- 头像与状态点 -->
+                    <div class="relative shrink-0">
+                        <img :src="item.avatar" class="w-10 h-10 rounded-full object-cover border border-gray-100 bg-gray-50">
+                        <div v-if="item.monitor && item.lastLive === true" class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
 
-                    <div class="flex items-center gap-3">
+                    <!-- 中间信息 -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <div class="font-bold text-slate-900 truncate text-sm">{{ item.name }}</div>
+                            <!-- 状态标签 -->
+                            <span v-if="item.monitor">
+                                <span v-if="item.lastLive === true" class="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-md font-medium shrink-0">直播中</span>
+                                <span v-else-if="item.lastLive === false" class="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded-md font-medium shrink-0">离线</span>
+                                <span v-else class="text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-600 rounded-md font-medium shrink-0">检测中</span>
+                            </span>
+                            <span v-else class="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-400 rounded-md font-medium shrink-0">未监控</span>
+                        </div>
+                        <div class="text-xs text-gray-400 truncate font-mono">ID: {{ item.id }}</div>
+                    </div>
+
+                    <!-- 右侧操作 -->
+                    <div class="flex items-center gap-3 shrink-0">
                         <!-- 监控开关 -->
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only" :checked="item.monitor" @change="toggleMonitor(item)">
-                            <div :class="item.monitor ? 'bg-blue-500' : 'bg-gray-300'" class="w-10 h-5 rounded-full transition relative">
-                                <div :class="item.monitor ? 'translate-x-5' : ''" class="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition"></div>
-                            </div>
+                            <input type="checkbox" class="sr-only peer" :checked="item.monitor" @change="toggleMonitor(item)">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
-
-                        <!-- 直播状态 -->
-                        <span v-if="item.lastLive === true" class="inline-flex items-center gap-1 text-green-600 font-medium">
-              <span class="w-3 h-3 bg-green-500 rounded-full inline-block"></span> 直播中
-            </span>
-                        <span v-else-if="item.lastLive === false" class="inline-flex items-center gap-1 text-gray-400 font-medium">
-              <span class="w-3 h-3 bg-gray-400 rounded-full inline-block"></span> 离线
-            </span>
-                        <span v-else class="inline-flex items-center gap-1 text-yellow-500 font-medium">
-              <span class="w-3 h-3 bg-yellow-500 rounded-full inline-block"></span> 检测中
-            </span>
-
-                        <button @click="deleteAnchor(item.id)" class="text-red-500 text-xs">✕</button>
+                        <!-- 删除按钮 -->
+                        <button @click="deleteAnchor(item.id)" class="text-slate-300 hover:text-red-500 p-1 -mr-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                     </div>
+
                 </div>
             </div>
 
@@ -180,6 +300,7 @@
 			return {
 				list: [],
 				newId: '',
+				mobileMenuOpen: false,
 				// apiBase: 'http://localhost:8000/api'
 				apiBase: '/api'
 				// apiBase:'https://douyin-monitor.onrender.com/api'
@@ -191,6 +312,10 @@
 			setInterval(this.fetchList, 60000)
 		},
 		methods: {
+				// 切换移动端菜单
+				toggleMobileMenu() {
+					this.mobileMenuOpen = !this.mobileMenuOpen;
+				},
 			async fetchList() {
 				try {
 					const res = await fetch(`${this.apiBase}/list`)
@@ -198,7 +323,7 @@
 					this.list = await res.json()
 				} catch (err) {
 					console.error(err)
-					alert('⚠️ 列表刷新失败，请检查服务器')
+					// alert('⚠️ 列表刷新失败，请检查服务器')
 				}
 			},
 			async addAnchor() {
@@ -235,13 +360,122 @@
 					alert('⚠️ 删除失败')
 				}
 			},
-			formatTime(ts) {
-				const d = new Date(ts)
-				return d.toLocaleString()
+			formatTime(timestamp) {
+				// 格式化时间戳为易读格式
+				if (!timestamp) return '';
+				const date = new Date(timestamp);
+				const now = new Date();
+				const diff = now - date;
+				
+				// 计算时间差
+				const minutes = Math.floor(diff / 60000);
+				const hours = Math.floor(diff / 3600000);
+				const days = Math.floor(diff / 86400000);
+				
+				// 根据时间差返回不同格式
+				if (minutes < 60) {
+					return `${minutes}分钟前`;
+				} else if (hours < 24) {
+					return `${hours}小时前`;
+				} else if (days < 30) {
+					return `${days}天前`;
+				} else {
+					// 返回具体日期
+					return date.toLocaleDateString();
+				}
 			}
 		}
 	}).mount('#app')
+
+// PWA 相关脚本
+// 注册 Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        console.log('Service Worker 注册成功:', registration.scope);
+      })
+      .catch(error => {
+        console.log('Service Worker 注册失败:', error);
+      });
+  });
+}
+
+// PWA 安装提示
+let deferredPrompt;
+const installPrompt = document.getElementById('pwa-install-prompt');
+const installButton = document.getElementById('install-button');
+const closeButton = document.getElementById('close-install-prompt');
+
+// 监听安装事件
+window.addEventListener('beforeinstallprompt', (e) => {
+  // 阻止 Chrome 67 及更早版本自动显示安装提示
+  e.preventDefault();
+  // 保存事件，以便稍后触发
+  deferredPrompt = e;
+  // 显示自定义安装提示
+  if (installPrompt) {
+    installPrompt.style.display = 'block';
+  }
+});
+
+// 点击安装按钮
+if (installButton) {
+  installButton.addEventListener('click', async () => {
+    if (!deferredPrompt) {
+      return;
+    }
+    // 显示安装提示
+    deferredPrompt.prompt();
+    // 等待用户响应
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`用户选择: ${outcome}`);
+    // 重置 deferredPrompt
+    deferredPrompt = null;
+    // 隐藏安装提示
+    if (installPrompt) {
+      installPrompt.style.display = 'none';
+    }
+  });
+}
+
+// 点击关闭按钮
+if (closeButton) {
+  closeButton.addEventListener('click', () => {
+    if (installPrompt) {
+      installPrompt.style.display = 'none';
+    }
+  });
+}
+
+// 监听应用已安装事件
+window.addEventListener('appinstalled', () => {
+  console.log('应用已安装到主屏幕');
+  // 隐藏安装提示
+  if (installPrompt) {
+    installPrompt.style.display = 'none';
+  }
+});
 </script>
 
+<!-- PWA 安装提示 -->
+<div id="pwa-install-prompt">
+  <div class="flex justify-between items-start">
+    <div>
+      <h3 class="text-lg font-semibold mb-2">安装到主屏幕</h3>
+      <p class="text-sm text-gray-600">将应用添加到主屏幕，享受更好的体验</p>
+    </div>
+    <button id="close-install-prompt" class="text-gray-400 hover:text-gray-600">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  <div class="mt-4">
+    <button id="install-button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full font-medium">
+      安装
+    </button>
+  </div>
+</div>
 </body>
 </html>

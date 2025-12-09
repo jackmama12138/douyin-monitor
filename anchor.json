@@ -5,7 +5,7 @@
     "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_df19ebdcd55b543425aa8e45da0c139c.jpeg?from=3067671334",
     "monitor": false,
     "createdAt": 1764587201516,
-    "updatedAt": 1764843475994
+    "updatedAt": 1765239084528
   },
   {
     "name": "东营初九",
@@ -13,17 +13,7 @@
     "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f60e330593fd21af697bbaa038cfd49d.jpeg?from=3067671334",
     "monitor": false,
     "createdAt": 1764587403830,
-    "updatedAt": 1764784902886
-  },
-  {
-    "name": "旭旭宝宝",
-    "id": "renyixu1989",
-    "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f246f34fbc1f4da300834745a9dfa0fa.jpeg?from=3067671334",
-    "monitor": false,
-    "createdAt": 1764784188834,
-    "updatedAt": 1764870560503,
-    "checkInterval": 600,
-    "lastCheckAt": 1764785400027
+    "updatedAt": 1765239087878
   },
   {
     "name": "逻辑与谎言狼人杀",
@@ -31,6 +21,14 @@
     "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_38c9c879dd452f949872f85c196bd0ca.jpeg?from=3067671334",
     "monitor": false,
     "createdAt": 1764870552195,
-    "updatedAt": 1764870556369
+    "updatedAt": 1765235380777
+  },
+  {
+    "name": "旭旭宝宝",
+    "id": "renyixu1989",
+    "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f246f34fbc1f4da300834745a9dfa0fa.jpeg?from=3067671334",
+    "monitor": false,
+    "createdAt": 1765233688631,
+    "updatedAt": 1765235040822
   }
 ]

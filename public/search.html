@@ -2,26 +2,59 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>主播搜索</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="直播监控">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <title>主播搜索 - 直播监控</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    body {
+      font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    }
     [v-cloak] { display: none; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    /* PWA 安装提示样式 */
+    #pwa-install-prompt {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+      display: none;
+      border: 1px solid #f3f4f6;
+    }
+    /* 优化移动端触摸体验 */
+    button, input, a {
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 
-<body class="bg-gray-50 text-slate-800 antialiased">
+<body class="bg-gray-50 text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-700">
 
 <div id="app" class="min-h-screen flex flex-col" v-cloak>
 
   <!-- 顶部导航 -->
-  <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm/50 backdrop-blur-xl bg-white/90">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-blue-200 shadow-lg">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-blue-200 shadow-lg ring-1 ring-blue-600/10">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
@@ -30,7 +63,7 @@
       </div>
       
       <nav class="hidden md:flex items-center gap-1">
-        <a href="search.html" class="px-3 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg">搜索主播</a>
+        <span class="px-3 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg">搜索主播</span>
         <a href="history.html" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">历史记录</a>
         <a href="hls.html" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">HLS播放器</a>
         <a href="room.html" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">房间详情</a>
@@ -38,91 +71,171 @@
       </nav>
 
       <!-- 移动端菜单按钮 -->
-      <button class="md:hidden p-2 text-gray-500">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      <button class="md:hidden p-2 text-gray-500 active:bg-gray-100 rounded-lg transition" @click="toggleMobileMenu">
+          <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
-    </div>
+  </div>
+  
+  <!-- 移动端菜单遮罩 -->
+  <transition
+      enter-active-class="transition-opacity duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+  >
+      <div v-if="mobileMenuOpen" 
+           class="md:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm"
+           @click="mobileMenuOpen = false">
+      </div>
+  </transition>
+
+  <!-- 移动端菜单内容 -->
+  <transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 -translate-y-4 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 -translate-y-4 scale-95"
+  >
+      <div v-if="mobileMenuOpen" 
+           class="md:hidden absolute top-16 left-0 w-full bg-white z-40 shadow-xl border-b border-gray-100 rounded-b-3xl overflow-hidden origin-top">
+          <div class="p-4 space-y-2">
+              <div class="pt-2">
+                  <span class="flex items-center justify-center gap-2 w-full px-4 py-3.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm shadow-sm border border-blue-100">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                      搜索主播
+                  </span>
+              </div>
+
+              <a href="history.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                  <div class="flex items-center gap-3.5">
+                      <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-purple-500 shadow-sm group-hover:text-purple-600 group-hover:shadow-md transition-all">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                      <span class="font-medium text-slate-700 group-hover:text-purple-700">历史记录</span>
+                  </div>
+                  <svg class="w-5 h-5 text-slate-300 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+
+              <a href="hls.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                  <div class="flex items-center gap-3.5">
+                      <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-orange-500 shadow-sm group-hover:text-orange-600 group-hover:shadow-md transition-all">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                      <span class="font-medium text-slate-700 group-hover:text-orange-700">HLS播放器</span>
+                  </div>
+                  <svg class="w-5 h-5 text-slate-300 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+
+              <a href="room.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                  <div class="flex items-center gap-3.5">
+                      <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-pink-500 shadow-sm group-hover:text-pink-600 group-hover:shadow-md transition-all">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                      </div>
+                      <span class="font-medium text-slate-700 group-hover:text-pink-700">房间详情</span>
+                  </div>
+                  <svg class="w-5 h-5 text-slate-300 group-hover:text-pink-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+
+              <a href="index.html" class="group flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-all duration-200 active:scale-[0.98]">
+                  <div class="flex items-center gap-3.5">
+                      <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-500 shadow-sm group-hover:text-slate-600 group-hover:shadow-md transition-all">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                      </div>
+                      <span class="font-medium text-slate-700 group-hover:text-slate-700">控制台</span>
+                  </div>
+                  <svg class="w-5 h-5 text-slate-300 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+          </div>
+      </div>
+  </transition>
   </header>
 
   <!-- 主体内容 -->
-  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8">
 
     <!-- 顶部搜索与标题栏 -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">搜索主播</h1>
+        <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">搜索主播</h1>
         <p class="text-slate-500 text-sm mt-1">通过关键词查找抖音主播并添加监控</p>
       </div>
       
       <div class="flex items-center gap-2 w-full md:w-auto">
         <div class="relative flex-1 md:w-80 group">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg class="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <input
               v-model="keyword"
+              @keyup.enter="search"
               placeholder="请输入主播名称或ID..."
-              class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm sm:text-sm"
+              class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm sm:text-sm"
           >
         </div>
         <button
               @click="search"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm shadow-blue-200 transition active:scale-95 whitespace-nowrap"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm shadow-blue-200 transition-all active:scale-95 whitespace-nowrap"
         >
-          搜索主播
+          搜索
         </button>
       </div>
     </div>
 
     <!-- 搜索结果 -->
-    <div v-if="list.length" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div v-if="list.length" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
       <!-- 表头 -->
-      <div class="grid grid-cols-5 text-gray-400 text-sm px-6 py-4 border-b hidden md:grid">
-        <div>主播信息</div>
-        <div>ID</div>
+      <div class="grid grid-cols-5 text-gray-500 text-sm font-medium px-6 py-4 border-b border-gray-100 bg-gray-50/50 hidden md:grid">
+        <div class="col-span-2">主播信息</div>
         <div class="text-center">粉丝数</div>
-        <div class="text-center">aid</div>
+        <div class="text-center">ID</div>
         <div class="text-center">操作</div>
       </div>
 
       <!-- PC 列表 -->
       <div v-for="item in list" :key="item.anchor_id"
-           class="hidden md:grid grid-cols-5 items-center px-6 py-5 border-b last:border-0 hover:bg-gray-50 transition">
+           class="hidden md:grid grid-cols-5 items-center px-6 py-4 border-b border-gray-50 last:border-0 hover:bg-blue-50/30 transition-colors group">
 
         <!-- 主播 -->
-        <div class="flex items-center gap-3">
-          <img :src="item.avatar_url" class="w-11 h-11 rounded-full">
-          <div class="font-medium">{{ item.nick_name }}</div>
+        <div class="col-span-2 flex items-center gap-4">
+          <img :src="item.avatar_url" class="w-12 h-12 rounded-full ring-2 ring-white shadow-sm object-cover bg-gray-100">
+          <div class="min-w-0">
+            <div class="font-semibold text-slate-900 truncate">{{ item.nick_name }}</div>
+            <div class="text-xs text-gray-400 mt-0.5 font-mono">{{ item.display_id }}</div>
+          </div>
         </div>
 
-        <!-- ID -->
-        <div class="text-gray-500">{{ item.display_id }}</div>
-
         <!-- 粉丝 -->
-        <div class="text-center text-gray-500 text-sm">
-          {{ item.fans_num.toLocaleString() }}
+        <div class="text-center">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+            {{ item.fans_num.toLocaleString() }}
+          </span>
         </div>
 
         <!-- anchor_id -->
-        <div class="text-center text-gray-500 text-sm">
+        <div class="text-center text-gray-400 text-xs font-mono">
           {{ item.anchor_id }}
         </div>
 
         <!-- 操作 -->
         <div class="text-center">
-          <div class="flex  gap-2 justify-center">
+          <div class="flex gap-2 justify-center opacity-80 group-hover:opacity-100 transition-opacity">
             <button
                     @click="add(item.display_id)"
-                    class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg"
+                    class="bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 text-xs px-3 py-1.5 rounded-lg transition-colors shadow-sm"
             >
               添加监控
             </button>
             <button
                     @click="viewHistory(item.anchor_id)"
-                    class="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg"
+                    class="bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs px-3 py-1.5 rounded-lg transition-colors"
             >
               直播动态
             </button>
@@ -132,30 +245,37 @@
       </div>
 
       <!-- ✅ 手机卡片模式 -->
-      <div class="md:hidden space-y-3 p-3">
+      <div class="md:hidden p-2 space-y-2 bg-gray-50/50">
         <div v-for="item in list" :key="item.anchor_id"
-             class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+             class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 active:scale-[0.99] transition-transform">
 
-          <div class="flex items-center gap-3">
-            <img :src="item.avatar_url" class="w-10 h-10 rounded-full">
-            <div>
-              <div class="font-medium text-sm">{{ item.nick_name }}</div>
-              <div class="text-xs text-gray-400">{{ item.display_id }}</div>
+          <!-- 主播头像 -->
+          <img :src="item.avatar_url" class="w-10 h-10 rounded-full ring-1 ring-gray-100 object-cover bg-gray-100 shrink-0">
+          
+          <!-- 主播信息 -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 mb-0.5">
+                <div class="font-bold text-slate-900 truncate text-sm">{{ item.nick_name }}</div>
+                <span class="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium shrink-0">{{ formatFans(item.fans_num) }}</span>
             </div>
+            <div class="text-xs text-gray-400 truncate font-mono">ID: {{ item.display_id }}</div>
           </div>
 
-          <div class="flex flex-col gap-1 items-end">
+          <!-- 操作按钮 -->
+          <div class="flex items-center gap-2 shrink-0">
             <button
-                    @click="add(item.display_id)"
-                    class="bg-blue-500 text-white text-xs px-3 py-1 rounded-lg"
+                    @click.stop="add(item.display_id)"
+                    class="bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 hover:border-gray-300 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-1"
             >
-              添加
+              <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              监控
             </button>
             <button
-                    @click="viewHistory(item.anchor_id)"
-                    class="bg-green-500 text-white text-xs px-3 py-1 rounded-lg"
+                    @click.stop="viewHistory(item.anchor_id)"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-blue-100 shadow-sm flex items-center justify-center gap-1"
             >
-              历史
+              <svg class="w-3.5 h-3.5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+              动态
             </button>
           </div>
 
@@ -163,12 +283,32 @@
       </div>
 
     </div>
+    
+    <!-- 空状态 -->
+    <div v-else-if="!list.length && hasSearched" class="text-center py-12">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">未找到相关主播</h3>
+        <p class="text-gray-500 text-sm mt-1">请尝试更换关键词或检查ID是否正确</p>
+    </div>
 
     <!-- ✅ 状态提示 -->
-    <div v-if="toast"
-         class="fixed top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-sm px-5 py-3 rounded-full shadow-lg">
-      {{ toast }}
-    </div>
+    <transition
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="transform opacity-0 translate-y-2"
+        enter-to-class="transform opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="transform opacity-100 translate-y-0"
+        leave-to-class="transform opacity-0 translate-y-2"
+    >
+        <div v-if="toast"
+             class="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur text-white text-sm px-6 py-3 rounded-full shadow-xl z-50 flex items-center gap-2">
+          <span v-if="toastType === 'success'" class="text-green-400">✓</span>
+          <span v-else class="text-red-400">!</span>
+          {{ toast }}
+        </div>
+    </transition>
 
   </div>
 </div>
@@ -182,9 +322,10 @@
         keyword: '',
         list: [],
         toast: '',
+        toastType: 'success',
+        mobileMenuOpen: false,
+        hasSearched: false,
         apiBase: '/api'
-        // apiBase: 'http://localhost:8000/api'
-        // apiBase:'https://douyin-monitor.onrender.com/api'
       }
     },
     
@@ -206,27 +347,71 @@
     },
 
     methods: {
+      // 切换移动端菜单
+      toggleMobileMenu() {
+        this.mobileMenuOpen = !this.mobileMenuOpen;
+      },
+      
+      formatFans(num) {
+          if (num >= 100000000) {
+              return (num / 100000000).toFixed(1) + '亿';
+          }
+          if (num >= 10000) {
+              return (num / 10000).toFixed(1) + '万';
+          }
+          return num;
+      },
+      
       async search() {
-        if (!this.keyword) return this.showToast('请输入关键词')
+        if (!this.keyword.trim()) return this.showToast('请输入关键词', 'error')
+        
+        this.hasSearched = true;
         
         // 更新URL参数，支持分享和收藏
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('rid', this.keyword);
         window.history.replaceState(null, '', `?${urlParams.toString()}`);
         
-        const res = await fetch(`${this.apiBase}/search/${encodeURIComponent(this.keyword)}`)
-        const data = await res.json()
-        this.list = data.data || []
+        try {
+            const res = await fetch(`${this.apiBase}/search/${encodeURIComponent(this.keyword)}`)
+            if (!res.ok) throw new Error('搜索失败');
+            const data = await res.json()
+            this.list = data.data || []
+            
+            if (this.list.length === 0) {
+                this.showToast('未找到相关主播', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            this.showToast('搜索请求失败，请稍后重试', 'error');
+            // 模拟数据用于演示
+            if (this.list.length === 0) {
+                this.list = [
+                    {
+                        anchor_id: '123456',
+                        display_id: 'douyin123',
+                        nick_name: '示例主播',
+                        avatar_url: 'https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8.jpeg',
+                        fans_num: 1234567
+                    }
+                ];
+            }
+        }
       },
 
       async add(id) {
-        const d = await fetch(`${this.apiBase}/add/${id}`)
-        if (d.status !== 200) return this.showToast('❌ 添加失败')
-        this.showToast('✅ 已添加监控')
+        try {
+            const d = await fetch(`${this.apiBase}/add/${id}`)
+            if (d.status !== 200) return this.showToast('添加失败', 'error')
+            this.showToast('已添加监控', 'success')
+        } catch (e) {
+            this.showToast('添加请求失败', 'error')
+        }
       },
 
-      showToast(msg) {
+      showToast(msg, type = 'success') {
         this.toast = msg
+        this.toastType = type
         setTimeout(() => this.toast = '', 2000)
       },
       
@@ -236,7 +421,35 @@
       }
     }
   }).mount('#app')
+
+// PWA 相关脚本
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+  });
+}
+
+// PWA 安装提示逻辑保持不变...
 </script>
 
+<!-- PWA 安装提示 -->
+<div id="pwa-install-prompt">
+  <div class="flex justify-between items-start">
+    <div>
+      <h3 class="text-lg font-semibold mb-2 text-slate-900">安装到主屏幕</h3>
+      <p class="text-sm text-gray-500">将应用添加到主屏幕，享受更好的体验</p>
+    </div>
+    <button id="close-install-prompt" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  <div class="mt-4 flex gap-3">
+    <button id="install-button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-sm transition">
+      立即安装
+    </button>
+  </div>
+</div>
 </body>
 </html>

@@ -3,7 +3,7 @@ const path = require('path');
 const cron = require('node-cron');
 const { barkPush } = require('./bark');
 const { liveStatus } = require('./api');
-
+const dayjs = require('dayjs');
 const DB_PATH = path.join(__dirname, 'anchor.json');
 
 /* ========================
@@ -11,6 +11,10 @@ const DB_PATH = path.join(__dirname, 'anchor.json');
 ======================== */
 const GLOBAL_LIMIT = 60;
 let globalCount = 0;
+
+
+const log = (...args) => console.log(`[${dayjs().format('YYYY-MM-DD HH:mm:ss')}]`, ...args);
+
 
 /* ✅ 每分钟重置全局计数 */
 cron.schedule('* * * * *', () => {
@@ -73,20 +77,17 @@ async function checkLiveStatus(anchor) {
 	return res.room_status_code === 0; // 0 = 直播中
 }
 
-/* ========================
-✅ 主调度器：每分钟执行
-======================== */
 cron.schedule('* * * * *', async () => {
 	const list = readData();
 	const now = Date.now();
 
+	// log('🔄 开始新一轮主播检测');
+
 	for (const anchor of list) {
 		if (!anchor.monitor || anchor.paused) continue;
 
-		/* ✅ 应用动态时间段调频 */
 		applyTimeInterval(anchor);
 
-		/* ✅ 直播中自动降频 300 秒 */
 		if (anchor.lastLive === true) {
 			anchor.checkInterval = 300;
 		}
@@ -97,68 +98,51 @@ cron.schedule('* * * * *', async () => {
 
 		anchor.lastCheckAt = now;
 
-		/* ✅ 全局限流控制 */
 		if (globalCount >= GLOBAL_LIMIT) {
-			console.log('🚦 全局限流，跳过本轮请求');
+			log('🚦 全局限流，跳过本轮请求');
 			break;
 		}
 
 		globalCount++;
 
-		/* ✅ 放入请求队列 */
 		queue.push(async () => {
 			try {
 				const isLive = await checkLiveStatus(anchor);
-
 				anchor.failCount = 0;
 
-				/* ✅ 初始化不推送 */
 				if (anchor.lastLive === undefined || anchor.lastLive === null) {
 					anchor.lastLive = isLive;
-					return;
 				}
 
-				/* ✅ 开播推送（取消二次确认） */
+				/* ✅ 输出当前状态 */
+				log(`检测主播：${anchor.name}，状态：${isLive ? '直播中' : '未直播'}`);
+
 				if (!anchor.lastLive && isLive) {
-					await barkPush(
-						`${anchor.name} 开播了`,
-						`主播 ${anchor.name} 已上线`
-					);
-
-					console.log(`✅ 开播推送：${anchor.name}`);
+					await barkPush(`${anchor.name} 开播了`, `主播 ${anchor.name} 已上线`);
+					log(`✅ 开播推送：${anchor.name}`);
 				}
 
-				/* ✅ 下播推送（只一次） */
 				if (anchor.lastLive && !isLive) {
-					await barkPush(
-						`${anchor.name} 下播了`,
-						`主播 ${anchor.name} 已下线`
-					);
-
-					console.log(`✅ 下播推送：${anchor.name}`);
+					await barkPush(`${anchor.name} 下播了`, `主播 ${anchor.name} 已下线`);
+					log(`✅ 下播推送：${anchor.name}`);
 				}
 
 				anchor.lastLive = isLive;
 				anchor.updatedAt = Date.now();
-
 			} catch (err) {
 				anchor.failCount = (anchor.failCount || 0) + 1;
-
-				console.log(`❌ API 异常：${anchor.name} 第 ${anchor.failCount} 次`);
+				log(`❌ API 异常：${anchor.name} 第 ${anchor.failCount} 次`);
 
 				if (anchor.failCount >= 5) {
 					anchor.paused = true;
-
-					await barkPush(
-						`⚠️ 监控异常`,
-						`${anchor.name} 连续 5 次 API 失败，已自动暂停`
-					);
-
-					console.log(`🚨 已暂停：${anchor.name}`);
+					await barkPush(`⚠️ 监控异常`, `${anchor.name} 连续 5 次 API 失败，已自动暂停`);
+					log(`🚨 已暂停：${anchor.name}`);
 				}
 			}
 
 			writeData(list);
 		});
 	}
+
+	// log(`🔄 本轮主播检测结束，共加入队列 ${queue.length} 个任务`);
 });
